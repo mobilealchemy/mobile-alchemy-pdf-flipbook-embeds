@@ -1,0 +1,75 @@
+# Uploads plugin/ to the plugin's trunk and a new tag, and .wordpress-org/ to its assets, on WordPress.org's SVN.
+# Runs only when started by hand. Leave "dry run" ticked to see the changes without committing them.
+name: Release to WordPress.org
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry run (show the changes, commit nothing)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency: wordpress-org
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      SLUG: mobile-alchemy-pdf-flipbook-embeds
+      SVN_URL: https://plugins.svn.wordpress.org/mobile-alchemy-pdf-flipbook-embeds
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Subversion
+        run: command -v svn || { sudo apt-get update -q && sudo apt-get install -y -q subversion; }
+
+      - name: Read the version
+        id: version
+        run: |
+          header=$(sed -n 's/^ \* Version: *//p' "plugin/$SLUG.php" | tr -d '[:space:]')
+          stable=$(sed -n 's/^Stable tag: *//p' plugin/readme.txt | tr -d '[:space:]')
+          if [ -z "$header" ] || [ "$header" != "$stable" ]; then
+            echo "::error::The plugin header says version '$header' but readme.txt's Stable tag is '$stable'."
+            exit 1
+          fi
+          echo "version=$header" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare the SVN working copy
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          svn checkout -q --depth immediates "$SVN_URL" svn
+          svn update -q --set-depth infinity svn/trunk svn/assets
+          svn update -q --set-depth immediates svn/tags
+          if [ -d "svn/tags/$VERSION" ]; then
+            echo "::error::tags/$VERSION already exists on WordPress.org. Raise the version in the plugin header and the Stable tag first."
+            exit 1
+          fi
+          rsync -rc --delete --exclude=.svn plugin/ svn/trunk/
+          rsync -rc --delete --exclude=.svn .wordpress-org/ svn/assets/
+          cd svn
+          svn add -q --force trunk assets
+          svn status | awk '/^!/ { print $2 }' | xargs -r svn delete -q
+          svn copy -q trunk "tags/$VERSION"
+          # Without these, the directory offers the images as downloads instead of showing them.
+          for f in assets/*.png; do [ -e "$f" ] && svn propset -q svn:mime-type image/png "$f"; done
+          for f in assets/*.jpg; do [ -e "$f" ] && svn propset -q svn:mime-type image/jpeg "$f"; done
+          svn status
+
+      - name: Commit to WordPress.org
+        if: ${{ !inputs.dry_run }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          SVN_USERNAME: flipbookmaker
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        run: |
+          if [ -z "$SVN_PASSWORD" ]; then
+            echo "::error::The SVN_PASSWORD secret is missing. Set it under Settings, Secrets and variables, Actions."
+            exit 1
+          fi
+          cd svn
+          svn commit -m "Release $VERSION" --username "$SVN_USERNAME" --password "$SVN_PASSWORD" --non-interactive --no-auth-cache
