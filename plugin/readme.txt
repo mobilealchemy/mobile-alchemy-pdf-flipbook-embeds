@@ -2,9 +2,9 @@
 Contributors: flipbookmaker
 Tags: flipbook, pdf, embed, magazine, catalog
 Requires at least: 6.0
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,10 @@ No. It adds no scripts or styles, and loads nothing until a flipbook is on the p
 2. Paste a flipbook link into the block editor and the flipbook appears.
 
 == Changelog ==
+
+= 1.0.1 =
+* The shortcode now works with flipbook links that have a hyphen, such as custom links.
+* Tested with WordPress 7.2.
 
 = 1.0.0 =
 * First release.

@@ -3,7 +3,7 @@
  * Plugin Name:       Mobile Alchemy PDF Flipbook Embeds
  * Plugin URI:        https://flipbookmaker.co/
  * Description:       Show your FlipbookMaker flipbooks on your site. Paste a flipbook link into a post, or use the [flipbookmaker] shortcode.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Mobile Alchemy Ltd
@@ -18,8 +18,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** A flipbook's share or embed link: https://flipbookmaker.co/v/{slug} or /e/{slug}. */
-const FLIPBOOKMAKER_LINK = '#^https?://(?:www\.)?flipbookmaker\.co/[ve]/([A-Za-z0-9]+)/?(?:[?\#].*)?$#i';
+/**
+ * A flipbook's share or embed link: https://flipbookmaker.co/v/{slug} or /e/{slug}. The slug is a random code
+ * or a name with single hyphens between letters and digits, like spring-catalog.
+ */
+const FLIPBOOKMAKER_LINK = '#^https?://(?:www\.)?flipbookmaker\.co/[ve]/([A-Za-z0-9]+(?:-[A-Za-z0-9]+)*)/?(?:[?\#].*)?$#i';
 
 /**
  * Pasted FlipbookMaker links become embedded flipbooks, in the block editor and the classic editor.
